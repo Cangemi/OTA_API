@@ -6,7 +6,6 @@ const multer = require('multer');
 const app = express();
 const port = 3000;
 
-
 const uploadDir = path.join(__dirname, 'media');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
@@ -14,21 +13,35 @@ if (!fs.existsSync(uploadDir)) {
 
 // Configuração do multer
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, uploadDir); // Diretório onde o arquivo será salvo
-    },
-    filename: (req, file, cb) => {
-      const newFileName = 'firmware.bin'; // Nome fixo do arquivo
-      cb(null, newFileName); // Renomeia o arquivo
-    }
-  });
+  destination: (req, file, cb) => {
+    cb(null, uploadDir); // Diretório onde o arquivo será salvo
+  },
+  filename: (req, file, cb) => {
+    const newFileName = 'firmware.bin'; // Nome fixo do arquivo
+    cb(null, newFileName); // Renomeia o arquivo
+  }
+});
 
 const upload = multer({ storage: storage });
 
 // Endpoint para fornecer o arquivo .bin
 app.get('/firmware', (req, res) => {
   const filePath = path.join(uploadDir, 'firmware.bin');
+
+  // Verifica se o arquivo existe
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send('Arquivo de firmware não encontrado');
+  }
+
+  // Obtém o tamanho do arquivo
+  const stat = fs.statSync(filePath);
+
+  // Configura os cabeçalhos adequados
   res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Length', stat.size);
+  res.setHeader('Content-Disposition', 'attachment; filename="firmware.bin"');
+
+  // Envia o arquivo como resposta
   res.sendFile(filePath);
 });
 
