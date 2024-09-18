@@ -28,6 +28,7 @@ const upload = multer({ storage: storage });
 // Endpoint para fornecer o arquivo .bin
 app.get('/firmware', (req, res) => {
   const filePath = path.join(uploadDir, 'firmware.bin');
+  res.setHeader('Content-Type', 'application/octet-stream');
   res.sendFile(filePath);
 });
 
