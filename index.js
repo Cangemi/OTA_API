@@ -2,6 +2,8 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const md5 = require("md5-file");
+var router = express.Router();
 
 const app = express();
 const port = 3000;
@@ -25,8 +27,15 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Endpoint para fornecer o arquivo .bin
-app.get('/firmware', (req, res) => {
+app.get('/firmware', function(req, res, next) {
+    console.log(req.headers);
   const filePath = path.join(uploadDir, 'firmware.bin');
+
+  const options = {
+    headers: {
+     "x-MD5":  md5.sync(filePath)
+    }
+   }
 
   // Verifica se o arquivo existe
   if (!fs.existsSync(filePath)) {
@@ -42,7 +51,13 @@ app.get('/firmware', (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename="firmware.bin"');
 
   // Envia o arquivo como resposta
-  res.sendFile(filePath);
+  res.sendFile(file, function (err) {
+    if (err) {
+     next(err)
+    } else {
+     console.log('Sent:', file)
+    }
+   });
 });
 
 // Endpoint para exibir o formulário de upload
