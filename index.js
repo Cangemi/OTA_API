@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const md5 = require("md5-file");
-var router = express.Router();
 
 const app = express();
 const port = 3000;
