@@ -81,13 +81,10 @@ app.get('/firmware/:version', (req, res) => {
   // Se a versão for diferente, envia o arquivo
   if (filePath) {
     res.setHeader('Content-Disposition', `attachment; filename="${path.basename(filePath)}"`);
-    response = res.sendFile(filePath);
+    return res.sendFile(filePath);
   } else {
     return res.status(404).send('Firmware não encontrado.');
   }
-
-  deleteFileAfterSend(filePath);
-  return response;
 });
 
 // Endpoint para exibir o formulário de upload
