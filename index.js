@@ -81,7 +81,14 @@ app.get('/firmware/:version', (req, res) => {
   // Se a versão for diferente, envia o arquivo
   if (filePath) {
     res.setHeader('Content-Disposition', `attachment; filename="${path.basename(filePath)}"`);
-    return res.sendFile(filePath);
+    return res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error('Erro ao enviar o arquivo:', err);
+        return res.status(500).send('Erro ao enviar o arquivo.');
+      } else {
+        deleteFileAfterSend(filePath);
+      }
+    });
   } else {
     return res.status(404).send('Firmware não encontrado.');
   }
