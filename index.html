@@ -5,11 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload de Firmware</title>
 </head>
+    <style>
+        .input {
+        margin-bottom: 20px; 
+        }
+    </style>
 <body>
     <h1>Upload de Firmware</h1>
     <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="firmware" accept=".bin" required>
+        <label for="version">Versão do Firmware:</label>
+        <input type="text" id="version" name="version" placeholder="1.0.0.0" required>
+        <br><br>
+        <input type="file" id="firmware" name="firmware" accept=".bin" required>
+        <br><br>
         <button type="submit">Enviar</button>
-    </form>
+      </form>
 </body>
 </html>

@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "api_ota": "file:",
     "express": "^4.21.0",
     "md5": "^2.3.0",
     "md5-file": "^5.0.0",

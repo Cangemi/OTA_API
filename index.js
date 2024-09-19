@@ -9,10 +9,24 @@ const nets = networkInterfaces();
 
 const PORT = 3000;
 
+
+
+function deleteFileAfterSend(filePath) {
+  fs.unlink(filePath, (unlinkErr) => {
+    if (unlinkErr) {
+      console.error('Erro ao apagar o arquivo:', unlinkErr);
+    }
+  });
+}
+
 const uploadDir = path.join(__dirname, 'firmware');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
+
+// Middleware para processar campos de texto do formulário
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 // Configuração do multer
 const storage = multer.diskStorage({
@@ -20,18 +34,60 @@ const storage = multer.diskStorage({
     cb(null, uploadDir); // Diretório onde o arquivo será salvo
   },
   filename: (req, file, cb) => {
-    const newFileName = 'firmware.bin'; // Nome fixo do arquivo
+    const version = req.body.version; // Obtém a versão do firmware do formulário
+    console.log(`version: ${version}`);
+    const newFileName = `firmware_version_${version}.bin`; // Concatena a versão com o nome do arquivo
     cb(null, newFileName); // Renomeia o arquivo
   }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
-// Endpoint para fornecer o arquivo .bin
-app.get('/firmware', (req, res) => {
-  const filePath = path.join(uploadDir, 'firmware.bin');
-  res.setHeader('Content-Disposition', 'attachment; filename="firmware.bin"');
-  res.sendFile(filePath);
+
+// Endpoint para fornecer o arquivo .bin com a versão fornecida
+app.get('/firmware/:version', (req, res) => {
+  const oldVersion = req.params.version;
+  const files = fs.readdirSync(uploadDir);
+  
+  // Filtra os arquivos que seguem o padrão firmware_version_*.bin
+  const firmwareFiles = files.filter(file => file.startsWith('firmware_version_') && file.endsWith('.bin'));
+
+  if (firmwareFiles.length === 0) {
+    return res.status(404).send('Nenhum firmware encontrado.');
+  }
+
+  let latestVersion = '';
+  let filePath = '';
+  let response;
+
+  // Encontra a versão mais recente
+  firmwareFiles.forEach(file => {
+    const versionMatch = file.match(/firmware_version_(.+)\.bin/);
+    if (versionMatch) {
+      const version = versionMatch[1];
+      if (version > latestVersion) {
+        latestVersion = version;
+        filePath = path.join(uploadDir, file);
+      }
+    }
+  });
+
+  // Compara a versão mais recente com a oldVersion
+  if (latestVersion === oldVersion) {
+    deleteFileAfterSend(filePath);
+    return res.status(304).send('Firmware já está atualizado.');
+  }
+
+  // Se a versão for diferente, envia o arquivo
+  if (filePath) {
+    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(filePath)}"`);
+    response = res.sendFile(filePath);
+  } else {
+    return res.status(404).send('Firmware não encontrado.');
+  }
+
+  deleteFileAfterSend(filePath);
+  return response;
 });
 
 // Endpoint para exibir o formulário de upload
@@ -41,7 +97,12 @@ app.get('/upload', (req, res) => {
 
 // Endpoint para fazer upload do arquivo
 app.post('/upload', upload.single('firmware'), (req, res) => {
-  res.send('Arquivo enviado com sucesso!');
+  const version = req.body.version; // Agora `req.body.version` está disponível
+  if (version) {
+    res.send(`Arquivo firmware_${version}.bin enviado com sucesso!`);
+  } else {
+    res.status(400).send('Versão do firmware não especificada.');
+  }
 });
 
 app.listen(PORT, () => {
