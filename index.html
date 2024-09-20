@@ -4,21 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload de Firmware</title>
-</head>
     <style>
         .input {
-        margin-bottom: 20px; 
+            margin-bottom: 20px; 
         }
     </style>
+</head>
 <body>
     <h1>Upload de Firmware</h1>
     <form action="/upload" method="post" enctype="multipart/form-data">
         <label for="version">Versão do Firmware:</label>
         <input type="text" id="version" name="version" placeholder="1.0.0.0" required>
         <br><br>
+        
+        <label for="key">Api Key:</label>
+        <input type="text" id="key" name="key" placeholder="Insira uma Key" required>
+        <button type="button" onclick="generateCode()">Gerar Key</button>
+        <br><br>
+        
         <input type="file" id="firmware" name="firmware" accept=".bin" required>
         <br><br>
+        
         <button type="submit">Enviar</button>
-      </form>
+    </form>
+
+    <script>
+        // Função para gerar um código aleatório
+        function generateCode() {
+            const code = Math.random().toString(36).substring(2, 10) +
+            Math.random().toString(36).substring(2, 10); 
+            document.getElementById('key').value = code; 
+        }
+    </script>
 </body>
 </html>

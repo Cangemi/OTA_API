@@ -10,12 +10,26 @@ const nets = networkInterfaces();
 const PORT = 3000;
 
 
-
-function deleteFileAfterSend(filePath) {
-  fs.unlink(filePath, (unlinkErr) => {
-    if (unlinkErr) {
-      console.error('Erro ao apagar o arquivo:', unlinkErr);
+function deleteFirmwareFile(uploadDir) {
+  fs.readdir(uploadDir, (err, files) => {
+    if (err) {
+      console.error('Erro ao ler o diretório de firmware:', err);
+      return;
     }
+
+    // Filtrar e deletar arquivos que começam com 'firmware_'
+    files.forEach(file => {
+      if (file.startsWith('firmware_')) {
+        const filePath = path.join(uploadDir, file);
+        fs.unlink(filePath, (unlinkErr) => {
+          if (unlinkErr) {
+            console.error('Erro ao apagar o arquivo:', unlinkErr);
+          } else {
+            console.log(`Arquivo ${file} deletado com sucesso.`);
+          }
+        });
+      }
+    });
   });
 }
 
@@ -34,9 +48,12 @@ const storage = multer.diskStorage({
     cb(null, uploadDir); // Diretório onde o arquivo será salvo
   },
   filename: (req, file, cb) => {
-    const version = req.body.version; // Obtém a versão do firmware do formulário
+    deleteFirmwareFile(uploadDir);
+    const version = req.body.version;
+    const key = req.body.key;
+    console.log(`key: ${key}`);
     console.log(`version: ${version}`);
-    const newFileName = `firmware_version_${version}.bin`; // Concatena a versão com o nome do arquivo
+    const newFileName = `firmware_key.${key}_version_${version}.bin`; // Concatena a versão com o nome do arquivo
     cb(null, newFileName); // Renomeia o arquivo
   }
 });
@@ -47,10 +64,13 @@ const upload = multer({ storage });
 // Endpoint para fornecer o arquivo .bin com a versão fornecida
 app.get('/firmware/:version', (req, res) => {
   const oldVersion = req.params.version;
+  const apiKey = req.query.key;
   const files = fs.readdirSync(uploadDir);
+
+  console.log(`key: ${apiKey}`);
   
   // Filtra os arquivos que seguem o padrão firmware_version_*.bin
-  const firmwareFiles = files.filter(file => file.startsWith('firmware_version_') && file.endsWith('.bin'));
+  const firmwareFiles = files.filter(file => file.startsWith(`firmware_key.${apiKey}_version_`) && file.endsWith('.bin'));
 
   if (firmwareFiles.length === 0) {
     return res.status(404).send('Nenhum firmware encontrado.');
@@ -58,11 +78,10 @@ app.get('/firmware/:version', (req, res) => {
 
   let latestVersion = '';
   let filePath = '';
-  let response;
 
   // Encontra a versão mais recente
   firmwareFiles.forEach(file => {
-    const versionMatch = file.match(/firmware_version_(.+)\.bin/);
+    const versionMatch = file.match(new RegExp(`firmware_key\\.${apiKey}_version_(.+)\\.bin`));
     if (versionMatch) {
       const version = versionMatch[1];
       if (version > latestVersion) {
@@ -74,21 +93,13 @@ app.get('/firmware/:version', (req, res) => {
 
   // Compara a versão mais recente com a oldVersion
   if (latestVersion === oldVersion) {
-    deleteFileAfterSend(filePath);
     return res.status(304).send('Firmware já está atualizado.');
   }
 
   // Se a versão for diferente, envia o arquivo
   if (filePath) {
     res.setHeader('Content-Disposition', `attachment; filename="${path.basename(filePath)}"`);
-    return res.sendFile(filePath, (err) => {
-      if (err) {
-        console.error('Erro ao enviar o arquivo:', err);
-        return res.status(500).send('Erro ao enviar o arquivo.');
-      } else {
-        deleteFileAfterSend(filePath);
-      }
-    });
+    return res.sendFile(filePath);
   } else {
     return res.status(404).send('Firmware não encontrado.');
   }
@@ -102,6 +113,8 @@ app.get('/upload', (req, res) => {
 // Endpoint para fazer upload do arquivo
 app.post('/upload', upload.single('firmware'), (req, res) => {
   const version = req.body.version; // Agora `req.body.version` está disponível
+
+
   if (version) {
     res.send(`Arquivo firmware_${version}.bin enviado com sucesso!`);
   } else {
