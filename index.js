@@ -71,8 +71,9 @@ app.get('/firmware/:version', (req, res) => {
   
   // Filtra os arquivos que seguem o padrão firmware_version_*.bin
   const firmwareFiles = files.filter(file => file.startsWith(`firmware_key.${apiKey}_version_`) && file.endsWith('.bin'));
-
+  console.log(`ERRO 404: ${firmwareFiles.length}`);
   if (firmwareFiles.length === 0) {
+    console.log(`ERRO 404 dentro: ${firmwareFiles.length}`);
     return res.status(404).send('Nenhum firmware encontrado.');
   }
 
